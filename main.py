@@ -42,7 +42,7 @@ def initDown():
         f.write(json.dumps([{'id': j['id']} for j in final_result]))
 
 def appendDown():
-    json_result = api.user_bookmarks_illust(27956418)
+    json_result = api.user_bookmarks_illust(userid)
     new_result = json_result['illusts']
     with open('result.json', 'r') as f:
         result = json.loads(f.read())
