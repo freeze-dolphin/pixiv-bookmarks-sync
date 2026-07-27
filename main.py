@@ -7,6 +7,7 @@ def login(refresh_token):
     api = AppPixivAPI()
     try: 
         api.auth(refresh_token=refresh_token)
+        print('login successfully')
     except:
         print('login error!')
         return 0
