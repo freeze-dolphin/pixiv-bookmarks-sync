@@ -8,4 +8,5 @@ config.py
 result.json
 download
 PixivSyncFlag*
-validator.txt
+validator.md
+validator_result.py

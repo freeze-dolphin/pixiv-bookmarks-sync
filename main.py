@@ -2,10 +2,10 @@ import json, re, os
 from pixivpy3 import AppPixivAPI
 from config import refresh_token, userid
 
+api = AppPixivAPI()
+
 def login(refresh_token):
-    global api
-    api = AppPixivAPI()
-    try: 
+    try:
         api.auth(refresh_token=refresh_token)
         print('login successfully')
     except:
@@ -59,7 +59,7 @@ def appendDown():
     with open('result.json', 'w') as f:
         f.write(json.dumps([{'id': j['id']} for j in result]))
 
-def download(i):
+def download(i, silent=False):
     # download result
     artname = re.sub(r'[\/\\:*?"<>|]', '', (i['title']+i['user']['name']))
     if artname[0] == '.':
@@ -73,7 +73,8 @@ def download(i):
             api.download(url, path='./download/imgs', name=artname+os.path.basename(url))
     with open(os.path.join('./download/info/', artname + str(i['id']) + '.json'), 'w') as f:
         f.write(json.dumps(i))
-    print('done: ' + i['title'])
+    if not silent:
+        print('done: ' + i['title'])
 
 def main():
     if not os.path.exists('download'):
