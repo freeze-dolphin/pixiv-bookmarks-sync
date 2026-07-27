@@ -1,5 +1,11 @@
 __pycache__/
+.python-version
+.idea
+
 download/imgs/*
 download/info/*
 config.py
 result.json
+download
+PixivSyncFlag*
+validator.txt

@@ -12,7 +12,7 @@ from webbrowser import open as open_url
 import requests
 
 # Latest app version can be found using GET /v1/application-info/android
-USER_AGENT = "PixivAndroidApp/5.0.234 (Android 11; Pixel 5)"
+USER_AGENT = "PixivAndroidApp/6.66.1 (Android 16; Pixel 10)"
 REDIRECT_URI = "https://app-api.pixiv.net/web/v1/users/auth/pixiv/callback"
 LOGIN_URL = "https://app-api.pixiv.net/web/v1/login"
 AUTH_TOKEN_URL = "https://oauth.secure.pixiv.net/auth/token"
