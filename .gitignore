@@ -5,7 +5,7 @@ __pycache__/
 download/imgs/*
 download/info/*
 config.py
-result.json
+result.json*
 download
 PixivSyncFlag*
 validator.md
