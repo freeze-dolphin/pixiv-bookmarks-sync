@@ -6,6 +6,7 @@ download/imgs/*
 download/info/*
 config.py
 result.json*
+bookmarks.json*
 download
 PixivSyncFlag*
 validator.md

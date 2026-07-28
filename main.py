@@ -1,117 +1,114 @@
 import json, re, os
 import time
 
+import sys
 from pixivpy3 import AppPixivAPI
-from config import refresh_token, userid
+from tqdm import tqdm
+
+from config import *
+from utils import *
 
 api = AppPixivAPI()
+
+data_bookmarks_local = {"id": [], "last_pagination": 0}
+if os.path.isfile('bookmarks.json'):
+    with open("bookmarks.json", 'r') as f:
+        data_bookmarks_local = json.loads(f.read())
 
 
 def login(refresh_token):
     try:
         api.auth(refresh_token=refresh_token)
-        print('login successfully')
+        print(gray('api: login successfully'))
     except:
-        print('login error!')
+        print(red('api: login error'))
         return 0
     else:
         return 1
 
 
-def getMaxBookmarkIdFromResponse(json_result):
-    return int(json_result['next_url'].split('max_bookmark_id=')[1])
-
-
-def fetchAllBookmarks():
-    json_result = api.user_bookmarks_illust(userid)
-    result = [json_result['illusts']]
-    last_max_bookmark_id = getMaxBookmarkIdFromResponse(json_result)
-    while 1:
-        try:
-            max_bookmark_id = getMaxBookmarkIdFromResponse(json_result)
-            print(max_bookmark_id)
-            json_result = api.user_bookmarks_illust(userid, max_bookmark_id=max_bookmark_id)
-            tmp_result = []
-            for i in json_result['illusts']:
-                tmp_result.append(i)
-            result.append([x for x in tmp_result])
-            time.sleep(0.1)
-        except:
-            break
-    result = [j for i in result for j in i]
-    return (result, last_max_bookmark_id)
-
-
-def fetchBookmarksUntil(lastMaxBookmarkId):
-    json_result = api.user_bookmarks_illust(userid, max_bookmark_id=lastMaxBookmarkId)
-
-    result = [json_result['illusts']]
-    last_max_bookmark_id = getMaxBookmarkIdFromResponse(json_result)
-    max_bookmark_id = last_max_bookmark_id
-    while max_bookmark_id > lastMaxBookmarkId and len(result[0]) > 0:
-        try:
-            max_bookmark_id = getMaxBookmarkIdFromResponse(json_result)
-            print(max_bookmark_id)
-            json_result = api.user_bookmarks_illust(userid, max_bookmark_id=max_bookmark_id)
-            tmp_result = []
-            for i in json_result['illusts']:
-                tmp_result.append(i)
-            result.append([x for x in tmp_result])
-            time.sleep(0.1)
-        except:
-            break
-    result = [j for i in result for j in i]
-    return (result, last_max_bookmark_id)
-
-
-def saveAllBookmarks():
-    result, last_max_bookmark_id = fetchAllBookmarks()
-    final_result = []
-    for i in result:
-        final_result.append(i["id"])
-    with open('result.json', 'w') as f:
-        f.write(json.dumps({'id': final_result,
-                            "last_max_bookmark_id": last_max_bookmark_id}))
-
-
-def appendDown():
-    with open('result.json', 'r') as f:
-        result = json.loads(f.read())
-
-    bm, last = fetchBookmarksUntil(result["last_max_bookmark_id"])
-
-    for i in bm:
-        if i['id'] not in result["id"]:
-            try:
-                download(i)
-                time.sleep(1.5)
-            except:
-                print('error ' + str(i['id']))
-            else:
-                result["id"].append(i)
-                # pass
-
-    with open('result.json', 'w') as f:
-        f.write(json.dumps({'id': result["id"],
-                            "last_max_bookmark_id": last}))
-
-
 def download(i, silent=False):
-    # download result
+    should_delay = False
+    message = None
+
     artname = re.sub(r'[\/\\:*?"<>|]', '', (i['title'] + i['user']['name']))
     if artname[0] == '.':
         artname = '_' + artname
     if i['page_count'] == 1:
         url = i['meta_single_page']['original_image_url']
-        api.download(url, path='./download/imgs', name=artname + os.path.basename(url))
+        should_delay = should_delay or api.download(url, path='./download/imgs', name=artname + os.path.basename(url))
     else:
         for k in i['meta_pages']:
             url = k['image_urls']['original']
-            api.download(url, path='./download/imgs', name=artname + os.path.basename(url))
+            should_delay = should_delay or api.download(url, path='./download/imgs',
+                                                        name=artname + os.path.basename(url))
     with open(os.path.join('./download/info/', artname + str(i['id']) + '.json'), 'w') as f:
         f.write(json.dumps(i))
+
+    if not should_delay:
+        message = gray(f'download: passed {i["id"]} / {i["user"]["name"]} - {i['title']}')
+    else:
+        message = f'download: {i["id"]} / {i["user"]["name"]} - {i['title']}'
+
     if not silent:
-        print('done: ' + i['title'])
+        print(message)
+        return should_delay
+    else:
+        return should_delay, message
+
+
+def fetchBookmarks(max_pagination=data_bookmarks_local["last_pagination"]):
+    def extractMaxBookmarkId(_resp):
+        return int(_resp['next_url'].split('max_bookmark_id=')[1])
+
+    pagination = [None]
+    data_illusts = []
+    while True:
+        resp = api.user_bookmarks_illust(userid, max_bookmark_id=pagination[-1])
+        if "error" in resp:
+            print(resp["error"])
+            sys.exit(1)
+
+        resp_illusts = resp['illusts']
+
+        # handle illusts in current page
+        if len(resp_illusts) > 0:
+            data_illusts.extend(resp_illusts)
+        else:
+            print(yellow(f"pagination: {pagination[-1]} has no illusts"))
+            sys.exit(2)
+
+        print(f"pagination: {pagination[-1]} with {len(resp_illusts)} illusts")
+
+        # move to next page
+        next_page = None if resp["next_url"] is None \
+            else extractMaxBookmarkId(resp)
+
+        if next_page is None or next_page < max_pagination:
+            print(green("pagination: done"))
+            break
+
+        pagination.append(next_page)
+
+        time.sleep(delay_pagination)
+
+    new_illusts = []
+    for i in data_illusts:
+        if i["id"] not in data_bookmarks_local["id"]:
+            new_illusts.append(i)
+
+    # download new illusts
+    bar_download = tqdm(new_illusts)
+    for i in bar_download:
+        should_delay, msg = download(i, silent=True)
+        bar_download.write(msg)
+        if should_delay:
+            time.sleep(delay_download)
+
+    with open("bookmarks.json", 'w') as f:
+        data_bookmarks_local["last_pagination"] = pagination[1]
+        print(green(f"pagination: recorded {len(new_illusts)} new illusts"))
+        f.write(json.dumps(data_bookmarks_local))
 
 
 def main():
@@ -121,12 +118,12 @@ def main():
         os.makedirs('download/imgs')
     if not os.path.exists('download/info'):
         os.makedirs('download/info')
+
+    clear_empty_files("download/imgs")
+    clear_empty_files("download/info")
+
     if login(refresh_token) == 1:
-
-        if not os.path.exists('./result.json'):
-            saveAllBookmarks()
-
-        # appendDown()
+        fetchBookmarks(38078895879)
 
 
 if __name__ == '__main__':

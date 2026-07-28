@@ -2,7 +2,7 @@ import json
 import re
 from pathlib import Path
 
-import log
+import utils
 import orjson
 from tqdm import tqdm
 
@@ -109,9 +109,9 @@ for item in result:
         missing_json.append(item["id"])
 
 if len(missing_json) > 0:
-    print(log.red(f"  Missing JSON records: {len(missing_json)}"))
+    print(utils.red(f"  Missing JSON records: {len(missing_json)}"))
 else:
-    print(log.green(f"  Missing JSON records: {len(missing_json)}"))
+    print(utils.green(f"  Missing JSON records: {len(missing_json)}"))
 
 # ==========================
 # 第四步：检查图片
@@ -142,9 +142,9 @@ for json_file in tqdm(id_to_json.values(), unit="file"):
             )
 
 if len(missing_images) > 0:
-    print(log.red(f"  Missing image files: {len(missing_images)}"))
+    print(utils.red(f"  Missing image files: {len(missing_images)}"))
 else:
-    print(log.green(f"  Missing image files: {len(missing_images)}"))
+    print(utils.green(f"  Missing image files: {len(missing_images)}"))
 
 # ==========================
 # 保存结果
