@@ -1,4 +1,4 @@
 sync:
-	uv run main.py
+	uv run sync.py
 
 .PHONY: sync

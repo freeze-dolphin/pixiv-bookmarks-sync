@@ -9,7 +9,7 @@ echo Waiting for network...
 ping -n 1 8.8.8.8 >nul
 if not errorlevel 1 (
     echo Network is ready!
-    uv run main.py
+    uv run sync.py
     attrib -H %prefix%*
     del /f /q %prefix%*
     type nul > %prefix%%timestamp%
