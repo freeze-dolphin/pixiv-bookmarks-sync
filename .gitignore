@@ -4,10 +4,10 @@ __pycache__/
 
 download/imgs/*
 download/info/*
-config.py
-result.json*
-bookmarks.json*
+bookmarks*
+pagination_data*
 download
+
+config.py
+
 PixivSyncFlag*
-validator.md
-validator_result.py

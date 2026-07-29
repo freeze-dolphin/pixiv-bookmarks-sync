@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "orjson>=3.11.9",
+    "pillow>=12.3.0",
     "pixivpy3>=3.7.5",
     "tqdm>=4.69.1",
 ]
