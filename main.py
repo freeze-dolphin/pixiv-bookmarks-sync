@@ -16,26 +16,16 @@ from utils import *
 
 api = AppPixivAPI()
 
-_pagination_data = {}
-
-
-def load_pagination_data(filename):
-    global _pagination_data
-
-    if os.path.isfile(filename):
-        with open(filename, 'r') as _:
-            _pagination_data = json.loads(_.read())
-
-
 data_bookmarks_local = {"id": [], "invisible": [], "last_pagination": 0}
 if os.path.isfile('bookmarks.json'):
     with open("bookmarks.json", 'r') as _:
         data_bookmarks_local = json.loads(_.read())
 
 
-def login(refresh_token):
+def login(_refresh_token):
+    # noinspection PyBroadException
     try:
-        api.auth(refresh_token=refresh_token)
+        api.auth(refresh_token=_refresh_token)
         print(gray('api: login successfully'))
     except:
         print(red('api: login error'))
@@ -133,16 +123,16 @@ def record(i, dst, pid=None, replace=False):
     return True
 
 
-def fetchBookmarks(max_pagination=data_bookmarks_local["last_pagination"], debug_pagination=None):
-    if debug_pagination is None:
-        debug_pagination = len(_pagination_data) > 0
+def sync_bookmarks(max_pagination=None, source=None, should_dump=False):
+    if max_pagination is None:
+        max_pagination = data_bookmarks_local["last_pagination"]
 
-    def extractMaxBookmarkId(_resp):
+    def extract_max_bookmark_id(_resp):
         return int(_resp['next_url'].split('max_bookmark_id=')[1])
 
-    if debug_pagination:
-        pagination = _pagination_data["pagination"]
-        illusts = _pagination_data["illusts"]
+    if source is not None:
+        pagination = source["pagination"]
+        illusts = source["illusts"]
         max_pagination = 0
     else:
         pagination = [None]
@@ -178,7 +168,7 @@ def fetchBookmarks(max_pagination=data_bookmarks_local["last_pagination"], debug
 
             # move to next page
             next_page = None if resp["next_url"] is None \
-                else extractMaxBookmarkId(resp)
+                else extract_max_bookmark_id(resp)
 
             if next_page is None or next_page < max_pagination:
                 print(green("pagination: done"))
@@ -187,13 +177,17 @@ def fetchBookmarks(max_pagination=data_bookmarks_local["last_pagination"], debug
             pagination.append(next_page)
             time.sleep(delay_pagination)
 
-        if not debug_pagination:
+        if should_dump:
             with open("pagination_data.json", 'w') as _:
                 _.write(json.dumps({
                     "pagination": pagination,
                     "illusts": illusts
                 }))
 
+    return pagination, illusts
+
+
+def fetch_bookmarks(pagination, illusts):
     new_illusts = []
     new_ugoiras = []
 
@@ -213,7 +207,7 @@ def fetchBookmarks(max_pagination=data_bookmarks_local["last_pagination"], debug
                     new_ugoiras.append(i)
                 else:
                     new_illusts.append(i)
-                data_bookmarks_local['id'].insert(0, pid) # preserve the order (newest -> oldest)
+                data_bookmarks_local['id'].insert(0, pid)  # preserve the order (newest -> oldest)
             else:
                 data_bookmarks_local['invisible'].insert(0, pid)
     print(green("record: done"))
@@ -266,7 +260,9 @@ if __name__ == '__main__':
 
     if login(refresh_token) == 1:
         # load_pagination_data("pagination_data.json")
-        fetchBookmarks()
+
+        _pagination, _illusts = sync_bookmarks()
+        fetch_bookmarks(_pagination, _illusts)
 
         if len(sys.argv) > 1:
             subprocess.run(sys.argv[1:])
